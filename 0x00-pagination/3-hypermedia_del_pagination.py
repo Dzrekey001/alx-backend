@@ -1,23 +1,11 @@
 #!/usr/bin/env python3
-"""0-simple_helper_function.py
 """
+Deletion-resilient hypermedia pagination
+"""
+
 import csv
 import math
-from typing import Tuple, List
-
-
-def index_range(page: int, page_size: int) -> Tuple[int, int]:
-    """
-    Calculate the start and end index for pagination.
-    Parameters:
-    - page (int): The current page number.
-    - page_size (int): The number of items per page.
-    Returns:
-    - tuple[int, int]: A tuple containing the start index and the end index.
-    """
-    start_index = (page - 1) * page_size
-    end_index = start_index + page_size
-    return (start_index, end_index)
+from typing import List, Dict
 
 
 class Server:
@@ -27,6 +15,7 @@ class Server:
 
     def __init__(self):
         self.__dataset = None
+        self.__indexed_dataset = None
 
     def dataset(self) -> List[List]:
         """Cached dataset
@@ -39,32 +28,46 @@ class Server:
 
         return self.__dataset
 
-    def get_page(self, page: int = 1, page_size: int = 10) -> List[List]:
-        """Get the correct page from the dataset.
+    def indexed_dataset(self) -> Dict[int, List]:
+        """Dataset indexed by sorting position, starting at 0
         """
-        assert type(page) == int and type(page_size) == int
-        assert page > 0 and page_size > 0
+        if self.__indexed_dataset is None:
+            dataset = self.dataset()
+            truncated_dataset = dataset[:1000]
+            self.__indexed_dataset = {
+                i: dataset[i] for i in range(len(dataset))
+            }
+        return self.__indexed_dataset
 
-        dataset = self.dataset()
-        start_index, end_index = index_range(page, page_size)
-
-        if start_index >= len(dataset):
-            return []
-
-        return dataset[start_index:end_index]
-
-    def get_hyper(self, page: int = 1, page_size: int = 10) -> dict:
-        """Get the correct page from the dataset.
+    def get_hyper_index(self, index: int = None, page_size: int = 10) -> Dict:
+        """Returns a dictionary with the following key-value pairs:
+        index: the current start index of the return page. That is the index
+        of the first item in the current page. For example if requesting page
+        3 with page_size 20, and no data was removed from the dataset, the
+        current index should be 60.
+        next_index: the next index to query with. That should be the index of
+        the first item after the last item on the current page.
+        page_size: the current page size
+        data: the actual page of the dataset
         """
-        dataset = self.dataset()
-        data = self.get_page(page, page_size)
-        total_pages = math.ceil(len(dataset) / page_size)
+        assert type(index) == int and type(page_size) == int
+        assert 0 <= index < len(self.indexed_dataset())
+        assert page_size <= len(self.indexed_dataset())
+
+        data = []
+        next_index = index + page_size
+        i = index
+        while i < next_index:
+            if i not in self.indexed_dataset():
+                next_index += 1
+                i += 1
+                continue
+            data.append(self.indexed_dataset()[i])
+            i += 1
 
         return {
-            'page_size': len(data),
-            'page': page,
-            'data': data,
-            'next_page': page + 1 if page < total_pages else None,
-            'prev_page': page - 1 if page > 1 else None,
-            'total_pages': total_pages
+            'index': index,
+            'next_index': next_index,
+            'page_size': page_size,
+            'data': data
         }
