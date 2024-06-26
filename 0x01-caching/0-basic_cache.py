@@ -10,14 +10,6 @@ class BasicCache(BaseCaching):
     with no limit on the number of items stored.
     """
 
-    def __init__(self):
-        """
-        Initialize the BasicCache.
-        Calls the parent class's __init__ method to initialize
-        the cache_data dictionary.
-        """
-        super().__init__()
-
     def put(self, key: str, item: Any) -> None:
         """
         Add an item in the cache.
@@ -46,6 +38,4 @@ class BasicCache(BaseCaching):
         Any: The item stored in the cache, or None if the key does not exist
         or if the key is None.
         """
-        if key is None:
-            return None
         return self.cache_data.get(key, None)
