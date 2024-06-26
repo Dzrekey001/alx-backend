@@ -46,12 +46,12 @@ class FIFOCache(BaseCaching):
         if key is None or item is None:
             return
 
-        self.cache_data[key] = item
 
-        if len(self.cache_data) > self.MAX_ITEMS:
+        if len(self.cache_data) + 1 > self.MAX_ITEMS:
             oldest_key = next(iter(self.cache_data))
             del self.cache_data[oldest_key]
             print("DISCARD:", oldest_key)
+        self.cache_data[key] = item
 
     def get(self, key: str) -> Any:
         """
